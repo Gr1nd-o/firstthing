@@ -1,16 +1,49 @@
--- LocalScript in StarterPlayerScripts
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Celestial",
+   LoadingTitle = "Celestial Scripts",
+   LoadingSubtitle = "by Windo",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Celestial",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided",
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+local ESPTab = Window:CreateTab("ESP", nil) -- Title, Image
+
+local Section = ESPTab:CreateSection("ESP")
+
+local Button = ESPTab:CreateButton({
+   Name = "Chams (Press H To Toggle)",
+   Callback = function()
+   -- LocalScript in StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
-local highlightEnabled = false  -- Toggle state
+local highlightEnabled = false  -- Starts with highlighting disabled
 
--- Function to add highlight effect to a player's character
+-- Function to add highlight to a player's character
 local function addHighlight(playerCharacter)
-    -- Check if the player already has a highlight and don't create a new one if they do
-    local existingHighlight = playerCharacter:FindFirstChild("PlayerHighlight")
-    if not existingHighlight then
+    if not playerCharacter:FindFirstChild("PlayerHighlight") then
         local highlight = Instance.new("Highlight")
         highlight.FillColor = Color3.new(1, 1, 1)  -- White color
         highlight.OutlineColor = Color3.new(1, 1, 1)  -- White outline
@@ -19,172 +52,405 @@ local function addHighlight(playerCharacter)
     end
 end
 
--- Function to add a vertical health bar that changes color based on health
-local function addHealthBar(playerCharacter)
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Size = UDim2.new(0.3, 0, 3, 0)  -- Increased width and height for a larger bar
-    billboardGui.StudsOffset = Vector3.new(-3, 0, 0)  -- Position further beside the character to the left
-    billboardGui.Adornee = playerCharacter:WaitForChild("HumanoidRootPart")
-    billboardGui.AlwaysOnTop = true
-    billboardGui.Name = "PlayerHealthBar"
+-- Function to remove highlight from a player's character
+local function removeHighlight(playerCharacter)
+    local highlight = playerCharacter:FindFirstChild("PlayerHighlight")
+    if highlight then
+        highlight:Destroy()
+    end
+end
 
+-- Function to toggle highlights on all other players
+local function toggleHighlights()
+    highlightEnabled = not highlightEnabled  -- Toggle the highlight state
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then  -- Exclude the local player
+            if player.Character then
+                if highlightEnabled then
+                    addHighlight(player.Character)
+                else
+                    removeHighlight(player.Character)
+                end
+            end
+
+            -- Ensure highlight is applied/removed on character respawn
+            player.CharacterAdded:Connect(function(character)
+                if highlightEnabled then
+                    addHighlight(character)
+                else
+                    removeHighlight(character)
+                end
+            end)
+        end
+    end
+end
+
+-- Toggle highlights with the "H" key
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.H then
+        toggleHighlights()
+    end
+end)
+
+-- Remove highlights when player leaves to prevent lingering effects
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then
+        removeHighlight(player.Character)
+    end
+end)
+
+   end,
+})
+
+local Button = ESPTab:CreateButton({
+   Name = "Health Bars (Press H To Toggle)",
+   Callback = function()
+   -- LocalScript in StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local healthBarEnabled = false  -- Start with health bars disabled
+
+-- Function to create and update the health bar
+local function addHealthBar(playerCharacter)
+    -- Create a BillboardGui for the health bar
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Size = UDim2.new(4, 0, 0.5, 0)  -- Wider for visibility
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0)  -- Position above the player's head
+    billboardGui.Adornee = playerCharacter:WaitForChild("Head")  -- Attach to the player’s head
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Name = "HealthBarGui"
+    billboardGui.Enabled = healthBarEnabled  -- Set initial state based on toggle
+
+    -- Background frame for the health bar
     local backgroundFrame = Instance.new("Frame")
     backgroundFrame.Size = UDim2.new(1, 0, 1, 0)
     backgroundFrame.BackgroundColor3 = Color3.new(0, 0, 0)  -- Black background
     backgroundFrame.BorderSizePixel = 0
     backgroundFrame.Parent = billboardGui
 
+    -- Add rounded corners to the background frame
+    local bgUICorner = Instance.new("UICorner")
+    bgUICorner.CornerRadius = UDim.new(0.3, 0)
+    bgUICorner.Parent = backgroundFrame
+    
+    -- Health bar frame
     local healthBar = Instance.new("Frame")
     healthBar.Size = UDim2.new(1, 0, 1, 0)  -- Full size initially
-    healthBar.AnchorPoint = Vector2.new(0, 1)  -- Anchor at the bottom to grow/shrink vertically
-    healthBar.Position = UDim2.new(0, 0, 1, 0)  -- Start from the bottom of the background
-    healthBar.BackgroundColor3 = Color3.new(0, 1, 0)  -- Initial green color
+    healthBar.Position = UDim2.new(0, 0, 0, 0)
+    healthBar.BackgroundColor3 = Color3.new(0, 1, 0)  -- Start green
     healthBar.BorderSizePixel = 0
     healthBar.Parent = backgroundFrame
+    
+    -- Add rounded corners to the health bar itself
+    local healthUICorner = Instance.new("UICorner")
+    healthUICorner.CornerRadius = UDim.new(0.3, 0)
+    healthUICorner.Parent = healthBar
 
+    -- Function to update health bar size and color based on health
+    local function updateHealthBar(health, maxHealth)
+        local healthPercentage = health / maxHealth
+        
+        -- Update the size of the health bar based on health
+        healthBar.Size = UDim2.new(healthPercentage, 0, 1, 0)
+        
+        -- Interpolate color from green (full health) to red (low health)
+        healthBar.BackgroundColor3 = Color3.new(1 - healthPercentage, healthPercentage, 0)
+    end
+    
+    -- Connect to health changes on the Humanoid
     local humanoid = playerCharacter:WaitForChild("Humanoid")
     humanoid.HealthChanged:Connect(function(health)
-        local healthPercentage = health / humanoid.MaxHealth
-
-        -- Resize the health bar based on health
-        healthBar.Size = UDim2.new(1, 0, healthPercentage, 0)
-
-        -- Color the health bar based on remaining health (green to red transition)
-        healthBar.BackgroundColor3 = Color3.new(1 - healthPercentage, healthPercentage, 0)
+        updateHealthBar(health, humanoid.MaxHealth)
     end)
-
+    
+    -- Set initial health bar state
+    updateHealthBar(humanoid.Health, humanoid.MaxHealth)
+    
+    -- Parent the GUI to the character
     billboardGui.Parent = playerCharacter
 end
 
--- Function to remove highlight and health bar from a character
-local function removeEffects(playerCharacter)
-    local highlight = playerCharacter:FindFirstChild("PlayerHighlight")
-    local healthBar = playerCharacter:FindFirstChild("PlayerHealthBar")
-
-    if highlight then
-        highlight:Destroy()
-    end
-    if healthBar then
-        healthBar:Destroy()
+-- Function to apply health bars to each player
+local function applyHealthBars()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then  -- Avoid showing health bar for self
+            if player.Character then
+                addHealthBar(player.Character)
+            end
+            
+            -- Apply health bar when the character respawns
+            player.CharacterAdded:Connect(function(character)
+                addHealthBar(character)
+            end)
+        end
     end
 end
 
--- Function to apply effects to a player's character
-local function applyEffectsToPlayer(player)
-    if player ~= LocalPlayer then  -- Skip the local player (yourself)
+-- Function to toggle the health bar on and off
+local function toggleHealthBars()
+    healthBarEnabled = not healthBarEnabled
+    
+    -- Update all existing health bars to reflect the new toggle state
+    for _, player in pairs(Players:GetPlayers()) do
         if player.Character then
-            if highlightEnabled then
-                addHighlight(player.Character)
-                addHealthBar(player.Character)
+            local healthBarGui = player.Character:FindFirstChild("HealthBarGui")
+            if healthBarGui then
+                healthBarGui.Enabled = healthBarEnabled
             end
         end
+    end
+end
 
+-- Apply health bars to all existing players
+applyHealthBars()
+
+-- Monitor for new players and add health bars
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        addHealthBar(character)
+    end)
+end)
+
+-- Toggle health bars with the "H" key
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.H then
+        toggleHealthBars()  -- Toggle health bar visibility when "H" is pressed
+    end
+end)
+
+   end,
+})
+
+local Button = ESPTab:CreateButton({
+   Name = "Nametags (Press H To Toggle)",
+   Callback = function()
+   -- LocalScript in StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local nameTagsEnabled = false  -- Name tags start off as disabled
+
+-- Function to add a name display above a player's head
+local function addNameTag(playerCharacter, playerName)
+    -- Check if a name tag already exists to avoid duplicates
+    if playerCharacter:FindFirstChild("NameTag") then return end
+
+    -- Create a BillboardGui for the name tag
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "NameTag"
+    billboardGui.Adornee = playerCharacter:WaitForChild("Head")  -- Attach to the player's head
+    billboardGui.Size = UDim2.new(2, 0, 0.5, 0)  -- Adjust size as needed
+    billboardGui.StudsOffset = Vector3.new(0, 2, 0)  -- Position slightly above the head
+    billboardGui.AlwaysOnTop = true  -- Ensure it's visible above other elements
+
+    -- Create a TextLabel inside the BillboardGui to display the name
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = playerName
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)  -- White text color
+    nameLabel.TextStrokeTransparency = 0.5  -- Slight text stroke for readability
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 20
+    nameLabel.Parent = billboardGui
+
+    -- Parent the BillboardGui to the player's character
+    billboardGui.Parent = playerCharacter
+end
+
+-- Function to remove name tags from all players
+local function removeNameTags()
+    for _, player in pairs(Players:GetPlayers()) do
+        -- Remove the name tag if it exists
+        if player.Character and player.Character:FindFirstChild("NameTag") then
+            player.Character.NameTag:Destroy()
+        end
+    end
+end
+
+-- Function to apply name tags to all players
+local function applyNameTags()
+    for _, player in pairs(Players:GetPlayers()) do
+        -- Add name tag to existing characters
+        if player.Character then
+            addNameTag(player.Character, player.Name)
+        end
+
+        -- Add name tag to any newly spawned character
         player.CharacterAdded:Connect(function(character)
-            if highlightEnabled then
-                addHighlight(character)
-                addHealthBar(character)
-            else
-                removeEffects(character)  -- Remove effects when highlight is off
-            end
+            addNameTag(character, player.Name)
         end)
     end
 end
 
--- Function to toggle highlights and health bars for all players except the local player
-local function togglePlayerEffects()
-    highlightEnabled = not highlightEnabled
+-- Function to toggle name tags on/off
+local function toggleNameTags()
+    if nameTagsEnabled then
+        -- Remove name tags
+        removeNameTags()
+    else
+        -- Apply name tags
+        applyNameTags()
+    end
 
-    -- Toggle effects for all existing players
+    -- Toggle the state
+    nameTagsEnabled = not nameTagsEnabled
+end
+
+-- Toggle name tags when the "H" key is pressed
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.H then
+        toggleNameTags()
+    end
+end)
+
+-- Add name tags for any new players who join, but only if name tags are enabled
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        if nameTagsEnabled then
+            addNameTag(character, player.Name)
+        end
+    end)
+end)
+
+   end,
+})
+
+local Button = ESPTab:CreateButton({
+   Name = "Radar",
+   Callback = function()
+   local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = game:GetService("Workspace").CurrentCamera
+local RadarGui = Instance.new("ScreenGui")  -- Create a ScreenGui for the radar
+RadarGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+RadarGui.Name = "RadarGui"
+
+-- Set up radar background on the left side of the screen
+local RadarFrame = Instance.new("Frame")
+RadarFrame.Size = UDim2.new(0, 200, 0, 200)  -- Size of the radar
+RadarFrame.Position = UDim2.new(0, 10, 0.5, -100)  -- Position at the middle-left (adjust Y value for better centering)
+RadarFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+RadarFrame.BackgroundTransparency = 0.5  -- Semi-transparent background
+RadarFrame.Parent = RadarGui
+
+-- Create a frame to represent the radar's center (just for visual aid)
+local RadarCenter = Instance.new("Frame")
+RadarCenter.Size = UDim2.new(0, 10, 0, 10)
+RadarCenter.Position = UDim2.new(0.5, -5, 0.5, -5)
+RadarCenter.BackgroundColor3 = Color3.fromRGB(255, 0, 0)  -- Red center
+RadarCenter.BorderSizePixel = 0
+RadarCenter.Parent = RadarFrame
+
+-- Table to store player dots on the radar
+local playerDots = {}
+
+-- Function to update radar
+local function updateRadar()
+    -- Remove old dots
+    for _, dot in pairs(playerDots) do
+        dot:Destroy()
+    end
+    playerDots = {}
+
+    -- Loop through all players
     for _, player in pairs(Players:GetPlayers()) do
-        if player.Character then
-            if highlightEnabled then
-                applyEffectsToPlayer(player)  -- Apply effects
-            else
-                removeEffects(player.Character)  -- Remove effects
+        -- Skip the local player (we don't want to show ourselves on the radar)
+        if player == LocalPlayer then continue end
+        
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = character.HumanoidRootPart
+
+            -- Get the position of the player's character in world space
+            local playerPosition = rootPart.Position
+
+            -- Calculate the relative position between the local player and the other player
+            local distance = (playerPosition - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            local angle = math.atan2(playerPosition.Z - LocalPlayer.Character.HumanoidRootPart.Position.Z, playerPosition.X - LocalPlayer.Character.HumanoidRootPart.Position.X)
+
+            -- Project the player's position onto the radar's 2D surface using simple polar coordinates
+            local radarX = (distance / 150) * (RadarFrame.Size.X.Offset / 2)  -- Scaling based on max range (150 studs)
+            local radarY = (distance / 150) * (RadarFrame.Size.Y.Offset / 2)  -- Scaling for Y as well
+
+            -- Adjust the position based on angle for 2D representation
+            radarX = radarX * math.cos(angle)
+            radarY = radarY * math.sin(angle)
+
+            -- Calculate the "dark square" bounds (the visible area on the radar)
+            local radarLeft = -RadarFrame.Size.X.Offset / 4
+            local radarRight = RadarFrame.Size.X.Offset / 4
+            local radarTop = -RadarFrame.Size.Y.Offset / 4
+            local radarBottom = RadarFrame.Size.Y.Offset / 4
+
+            -- Only show the player dot if it is inside the "dark square" area
+            if radarX >= radarLeft and radarX <= radarRight and radarY >= radarTop and radarY <= radarBottom then
+                -- Create a dot to represent this player on the radar
+                local dot = Instance.new("Frame")
+                dot.Size = UDim2.new(0, 5, 0, 5)  -- Small dot
+                dot.Position = UDim2.new(0, RadarFrame.Size.X.Offset / 2 + radarX, 0, RadarFrame.Size.Y.Offset / 2 - radarY)
+                dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- White dot for players
+                dot.BorderSizePixel = 0
+                dot.Parent = RadarFrame
+
+                -- Store the dot in the table
+                table.insert(playerDots, dot)
             end
         end
     end
 end
 
--- Continuously monitor for new players and apply effects or remove them
-Players.PlayerAdded:Connect(function(player)
-    -- Wait until the player's character is added and then apply/remove effects based on toggle state
-    player.CharacterAdded:Connect(function(character)
-        if highlightEnabled then
-            applyEffectsToPlayer(player)
-        else
-            removeEffects(character)
-        end
-    end)
+-- Update radar every frame
+game:GetService("RunService").Heartbeat:Connect(function()
+    updateRadar()
 end)
+   end,
+})
 
--- Apply effects to existing players when the script runs
-for _, player in pairs(Players:GetPlayers()) do
-    if player.Character then
-        if highlightEnabled then
-            applyEffectsToPlayer(player)
-        else
-            removeEffects(player.Character)
-        end
-    end
-end
+local AimbotTab = Window:CreateTab("Aimbot", nil) -- Title, Image
 
--- Toggle effects with the "H" key
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.H then
-        togglePlayerEffects()
-    end
-end)
+local Section = AimbotTab:CreateSection("Aimbot")
 
--- LocalScript in StarterPlayerScripts
-
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local Button = AimbotTab:CreateButton({
+   Name = "Silent Aim (Press F To Toggle)",
+   Callback = function()
+   local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = game:GetService("Workspace").CurrentCamera
-local mouse = LocalPlayer:GetMouse()
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
-local followingPlayer = false  -- Whether the camera should follow the player
-local targetPlayer = nil  -- The player currently being followed
-local maxFollowDistance = 150  -- Maximum radius distance (in studs) for the circle
-local followAngleThreshold = 0.5  -- Minimum dot product for the camera to consider a player in front of it
+local lockOnEnabled = false  -- Boolean to toggle lock-on state
+local lockOnPlayer = nil  -- Player to lock the camera on
+local connection = nil  -- To store the connection for updating the camera
 
--- Function to check if the player is within the follow range (circular area around the local player)
-local function isPlayerInRange(player)
-    -- Ensure the player has a character and head
-    if player.Character and player.Character:FindFirstChild("Head") then
-        local character = player.Character
-        local head = character.Head
-        local localPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart").Position or Vector3.new()
+-- Field of view angle in degrees
+local FOV = 60  -- You can adjust this value to control how wide the "in front" area is
 
-        -- Get the distance to the player
-        local distanceToPlayer = (head.Position - localPosition).Magnitude
-
-        -- Check if the player is within the maximum follow distance (circle radius)
-        return distanceToPlayer <= maxFollowDistance
-    end
-    return false
-end
-
--- Function to get the closest player to the center of the screen
+-- Function to get the closest player in front of the camera
 local function getClosestPlayer()
     local closestPlayer = nil
-    local closestDistance = math.huge  -- Start with a large number
+    local closestDistance = math.huge  -- Start with a very large number
 
-    -- Loop through all players to find the closest to the camera's center
     for _, player in pairs(Players:GetPlayers()) do
+        -- Skip the local player and players without a character
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
             local head = player.Character.Head
+            local directionToPlayer = (head.Position - Camera.CFrame.Position).unit  -- Unit vector towards the player
+            local cameraForward = Camera.CFrame.LookVector  -- The forward direction of the camera
 
-            -- Convert the player's head position to screen space
-            local screenPosition, onScreen = Camera:WorldToViewportPoint(head.Position)
+            -- Calculate the dot product to see if the player is in front of the camera
+            local dotProduct = cameraForward:Dot(directionToPlayer)
 
-            -- Only consider players that are within the camera's view
-            if onScreen and isPlayerInRange(player) then
-                -- Calculate the distance from the center of the screen (0.5, 0.5 is the center)
-                local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+            -- If the dot product is positive and within the FOV, it's considered "in front"
+            if dotProduct > math.cos(math.rad(FOV / 2)) then
+                local distance = (head.Position - Camera.CFrame.Position).Magnitude
 
-                -- If this player is closer to the center, update closestPlayer
                 if distance < closestDistance then
                     closestDistance = distance
                     closestPlayer = player
@@ -196,41 +462,197 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
--- Function to make the camera follow a player's head
-local function followPlayer(player)
-    -- Ensure the player has a character and head
-    if player.Character and player.Character:FindFirstChild("Head") then
+-- Function to lock the camera on the selected player's head
+local function lockCameraOnPlayer(player)
+    if player and player.Character then
         local head = player.Character.Head
+        local targetPosition = head.Position
+        local currentPosition = Camera.CFrame.Position
 
-        -- Update the camera's CFrame to follow the player's head
-        local cameraCFrame = CFrame.new(Camera.CFrame.Position, head.Position)
-        Camera.CFrame = cameraCFrame
+        -- Smoothly interpolate between the current camera position and the target position
+        local newCFrame = CFrame.new(currentPosition, targetPosition)
+        Camera.CFrame = newCFrame
     end
 end
 
--- Function to toggle the camera following behavior
-local function toggleFollow()
-    followingPlayer = not followingPlayer  -- Toggle the state
+-- Function to toggle lock-on mode with the "F" key
+local function toggleLockOn()
+    lockOnEnabled = not lockOnEnabled
 
-    -- If following is enabled, find the closest player to the camera
-    if followingPlayer then
-        targetPlayer = getClosestPlayer()  -- Find the closest player
+    if lockOnEnabled then
+        -- If lock-on is enabled, find the closest player in front of the camera
+        lockOnPlayer = getClosestPlayer()
+
+        -- If a player was found, start tracking them
+        if lockOnPlayer then
+            -- Start locking the camera on the player's head
+            connection = RunService.RenderStepped:Connect(function()
+                if lockOnEnabled and lockOnPlayer then
+                    lockCameraOnPlayer(lockOnPlayer)
+                end
+            end)
+        end
     else
-        targetPlayer = nil  -- Stop following
+        -- If lock-on is disabled, stop tracking
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
     end
 end
 
--- Main loop to check if the player is being looked at and follow them
-game:GetService("RunService").Heartbeat:Connect(function()
-    -- If following is enabled and a target player is set, follow the target player
-    if followingPlayer and targetPlayer then
-        followPlayer(targetPlayer)
+-- Connect to the "F" key for toggling lock-on
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.F then
+        toggleLockOn()
     end
 end)
 
--- Toggle follow behavior with right-click (MouseButton2)
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        toggleFollow()  -- Toggle follow state when right-click is pressed
+   end,
+})
+
+local FarmTab = Window:CreateTab("Farm", nil) -- Title, Image
+
+local Section = FarmTab:CreateSection("Farm")
+
+local Button = FarmTab:CreateButton({
+   Name = "Farm (Press Y To Toggle)",
+   Callback = function()
+   local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local hoverDistance = 5  -- Distance above the target's head to hover
+local hoverSpeed = 1  -- Speed at which the player flies to the position
+local hoverEnabled = false  -- Track if hovering is active
+local targetPlayer = nil  -- Store the locked target player
+
+-- Function to get the closest player to the LocalPlayer
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < closestDistance then
+                closestDistance = distance
+                closestPlayer = player
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Function to teleport and hover above the selected player's head
+local function teleportAndHover(player)
+    if player and player.Character then
+        local targetPosition = player.Character.HumanoidRootPart.Position + Vector3.new(0, hoverDistance, 0)
+
+        -- Smoothly move to the target position above the player's head
+        local tweenInfo = TweenInfo.new(hoverSpeed, Enum.EasingStyle.Linear)
+        local goal = { CFrame = CFrame.new(targetPosition) }
+        local tween = TweenService:Create(LocalPlayer.Character.HumanoidRootPart, tweenInfo, goal)
+        tween:Play()
+
+        -- Hover continuously above the locked target while hovering is enabled
+        RunService.RenderStepped:Connect(function()
+            if hoverEnabled and player == targetPlayer then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position + Vector3.new(0, hoverDistance, 0))
+            end
+        end)
+    end
+end
+
+-- Function to toggle hover mode on/off
+local function toggleHover()
+    hoverEnabled = not hoverEnabled
+
+    if hoverEnabled then
+        -- Lock onto the closest player when hovering is enabled
+        targetPlayer = getClosestPlayer()
+        if targetPlayer then
+            teleportAndHover(targetPlayer)
+        end
+    else
+        -- Reset the target when hovering is disabled
+        targetPlayer = nil
+    end
+end
+
+-- Detect key press to toggle hovering mode
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Y then
+        toggleHover()
     end
 end)
+
+   end,
+})
+
+local SelfTab = Window:CreateTab("Self", nil) -- Title, Image
+
+local Section = SelfTab:CreateSection("Self")
+
+local Button = SelfTab:CreateButton({
+   Name = "No Clip (Toggle With L)",
+   Callback = function()
+   local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local noClipEnabled = false  -- Toggle state for No-Clip mode
+local connection  -- Stores the connection for no-clip updates
+
+-- Function to start No-Clip
+local function startNoClip()
+    connection = RunService.Stepped:Connect(function()
+        -- Ensure character is loaded and has a Humanoid
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            -- Loop through all character parts
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    -- Disable collision for everything except the ground
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+-- Function to stop No-Clip
+local function stopNoClip()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    -- Re-enable collisions for all parts
+    local character = LocalPlayer.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+-- Function to toggle No-Clip when pressing "L"
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.L then
+        noClipEnabled = not noClipEnabled
+        if noClipEnabled then
+            startNoClip()
+        else
+            stopNoClip()
+        end
+    end
+end)
+
+   end,
+})
